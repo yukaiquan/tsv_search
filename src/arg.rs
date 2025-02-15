@@ -1,7 +1,7 @@
 use clap_v3::{App, Arg, ArgMatches};
 
 pub fn get_arg() -> ArgMatches {
-    println!("TSV Search  v0.0.1");
+    // println!("TSV Search  v0.0.1");
     App::new("tsv search")
         .version("0.0.1")
         .author("Yu kaiquan <1962568272@qq.com>")

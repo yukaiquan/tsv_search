@@ -2,13 +2,27 @@ mod arg;
 mod search;
 use crate::arg::get_arg;
 use crate::search::{get_key, read_table};
-use std::path;
-use textdb::accessor;
-use textdb::maps;
-use textdb::Table;
 
 use anyhow::Result;
 
+/// Executes the main functionality of the TSV search program.//+
+/////+
+/// This function parses command-line arguments, reads the input TSV file,//+
+/// and performs a search operation based on the provided keys and column number.//+
+/////+
+/// # Returns//+
+/////+
+/// Returns a `Result<()>` which is `Ok(())` if the program runs successfully,//+
+/// or an error if any operation fails.//+
+/////+
+/// # Errors//+
+/////+
+/// This function will return an error if://+
+/// - Required command-line arguments are missing//+
+/// - The input file cannot be read//+
+/// - The provided keys cannot be parsed as integers//+
+/// - The column number cannot be parsed as a usize//+
+/// - The search operation fails//+
 fn main() -> Result<()> {
     let args = get_arg();
     let input_file = args

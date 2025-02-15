@@ -6,30 +6,34 @@ use textdb::accessor::TsvParse;
 use textdb::maps::SafeMemoryMap;
 use textdb::{accessor, maps, Table};
 
+/// Searches for multiple keys in a table and prints the results.
+///
+/// This function takes a table, a vector of keys, and a column index. It searches for each key
+/// in the table and prints the result. If a key is found, it prints the value from the specified
+/// column. If a key is not found, it prints a "Not found" message.
+///
+/// # Parameters
+///
+/// * `table` - A reference to the Table to search in, with SafeMemoryMap and TsvParse<isize, 0> as its parameters.
+/// * `keys` - A reference to a Vec of isize values representing the keys to search for.
+/// * `col` - The index of the column to retrieve the value from when a key is found.
+///
+/// # Returns
+///
+/// Returns `Ok(())` if the function completes successfully, or an `Error` if any operation fails.
 pub fn get_key(
     table: &Table<SafeMemoryMap, TsvParse<isize, 0>>,
     keys: &Vec<isize>,
     col: usize,
 ) -> Result<(), Error> {
-    // let result = table.get_matching_lines(key).last();
-    // let mut res = "";
-    // // 如果查询成功，打印结果
-    // if let Some(line) = result {
-    //     // println!("{}: {:#?}", key, line.col(col));
-    //     res = line.col(col)?.to_string();
-    // } else {
-    //     println!("you input ID {} not found", key);
-    // }
-    // 批量查询逻辑
     for key in keys {
         let results = table.get_matching_lines(&key);
 
-        // 获取最后一个匹配项（保持原有逻辑）
         if let Some(line) = results.last() {
             let res = line.col(col);
-            println!("[Key: {}] Found: {}", key, print_json(res)?);
+            println!("Key: {}\tFound: {}", key, print_json(res)?);
         } else {
-            println!("[Key: {}] Not found", key);
+            println!("Key: {}\tNot found", key);
         }
     }
 
@@ -46,7 +50,7 @@ pub fn print_json(json_str: Result<&str, std::str::Utf8Error>) -> Result<String,
     match json_str {
         Ok(s) => match pretty_print_json(&s) {
             Ok(pretty) => res = pretty,
-            Err(e) => eprintln!("JSON 解析失败: {}", e),
+            Err(e) => res = s.to_string(),
         },
         Err(e) => eprintln!("错误: {}", e),
     }
