@@ -21,24 +21,60 @@ use textdb::{accessor, maps, Table};
 /// # Returns
 ///
 /// Returns `Ok(())` if the function completes successfully, or an `Error` if any operation fails.
+// pub fn get_key(
+//     table: &Table<SafeMemoryMap, TsvParse<isize, 0>>,
+//     keys: &Vec<isize>,
+//     col: usize,
+// ) -> Result<(), Error> {
+//     for key in keys {
+//         if let Some(line) = table.get_matching_lines(&key).last() {
+//             let res = line.col(col);
+//             println!("Key: {}\tFound: {}", key, print_json(res)?);
+//         } else {
+//             println!("Key: {}\tNot found", key);
+//         }
+//     }
+//     Ok(())
+// }
 pub fn get_key(
     table: &Table<SafeMemoryMap, TsvParse<isize, 0>>,
     keys: &Vec<isize>,
     col: usize,
 ) -> Result<(), Error> {
-    for key in keys {
-        let results = table.get_matching_lines(&key);
+    use rayon::prelude::*;   // 引入并行处理库
+    use std::sync::Mutex;
 
-        if let Some(line) = results.last() {
-            let res = line.col(col);
-            println!("Key: {}\tFound: {}", key, print_json(res)?);
-        } else {
-            println!("Key: {}\tNot found", key);
+    // 错误收集容器（线程安全）
+    let errors = Mutex::new(Vec::<Error>::new());
+
+    // 并行处理键查询
+    keys.par_iter().for_each(|key| {
+        let result = (|| -> Result<(), Error> {
+            // 保持不变的部分
+            if let Some(line) = table.get_matching_lines(key).last() {
+                let res = line.col(col)?;  // 保持原有错误处理逻辑
+                println!("Key: {}\tFound: {}", key, print_json(Ok(res))?);
+            } else {
+                println!("Key: {}\tNot found", key);
+            }
+            Ok(())
+        })();
+
+        // 收集错误到共享容器
+        if let Err(e) = result {
+            errors.lock().unwrap().push(e);
         }
-    }
+    });
 
-    Ok(())
+    // 错误优先返回机制
+    let errors = errors.into_inner().unwrap();
+    if let Some(first_error) = errors.into_iter().next() {
+        Err(first_error)
+    } else {
+        Ok(())
+    }
 }
+
 
 fn pretty_print_json(json_str: &str) -> SerdeResult<String> {
     let parsed: Value = from_str(json_str)?;
@@ -50,21 +86,11 @@ pub fn print_json(json_str: Result<&str, std::str::Utf8Error>) -> Result<String,
     match json_str {
         Ok(s) => match pretty_print_json(&s) {
             Ok(pretty) => res = pretty,
-            Err(e) => res = s.to_string(),
+            Err(_) => res = s.to_string(),
         },
-        Err(e) => eprintln!("错误: {}", e),
+        Err(e) => eprintln!("Error: {}", e),
     }
     Ok(res)
-}
-
-pub fn table_is_sorted(table: &Table<SafeMemoryMap, TsvParse<isize, 0>>) -> Result<bool, Error> {
-    let sorted = table.is_sorted()?;
-    if sorted {
-        return Ok(true);
-    } else {
-        eprintln!("Table is not sorted, skipping...");
-        return Ok(false);
-    }
 }
 
 pub fn read_table(input_file: &str) -> Result<Table<SafeMemoryMap, TsvParse<isize, 0>>, Error> {
@@ -84,6 +110,17 @@ pub fn read_table(input_file: &str) -> Result<Table<SafeMemoryMap, TsvParse<isiz
     let table = Table::new(map, accessor);
 
     Ok(table)
+}
+
+#[allow(dead_code)]
+fn table_is_sorted(table: &Table<SafeMemoryMap, TsvParse<isize, 0>>) -> Result<bool, Error> {
+    let sorted = table.is_sorted()?;
+    if sorted {
+        return Ok(true);
+    } else {
+        eprintln!("Table is not sorted, skipping...");
+        return Ok(false);
+    }
 }
 
 // 测试
@@ -107,7 +144,7 @@ mod tests {
         // assert!(table.is_sorted().unwrap());
         println!("{}", table_is_sorted(&table).unwrap());
         let user_id_to_search: Vec<isize> = vec![12314, 3124, 6554, 4242];
-        let _ = get_key(&table, &user_id_to_search, 1);
-        // println!("{:#?}", res);
+        let res = get_key(&table, &user_id_to_search, 1);
+        println!("{:#?}", res);
     }
 }

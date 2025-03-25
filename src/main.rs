@@ -5,6 +5,7 @@ use crate::search::{get_key, read_table};
 
 use anyhow::Result;
 
+/// 这个项目最初是为了优化从tsv文件查询基因表达信息而编写的，需要作者提供uniq并排序的键，并以tab分割，值在key之后，默认返还key后的第一列value，value建议格式化为json
 /// Executes the main functionality of the TSV search program.//+
 /////+
 /// This function parses command-line arguments, reads the input TSV file,//+
