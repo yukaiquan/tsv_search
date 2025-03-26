@@ -67,7 +67,7 @@ pub fn get_key(
     });
 
     // 错误优先返回机制
-    let errors = errors.into_inner().unwrap();
+    let errors = errors.into_inner()?;
     if let Some(first_error) = errors.into_iter().next() {
         Err(first_error)
     } else {
